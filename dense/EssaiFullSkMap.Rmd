@@ -1,0 +1,415 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.1
+  kernelspec:
+    display_name: Python 2
+    language: python
+    name: python2
+---
+
+```{python id=8FvWTuITh0RN, colab_type=code, outputId=041d1fd5-da87-4ef0-bf25-a8195ac14cee, executionInfo={'status': 'ok', 'timestamp': 1562852657184, 'user_tz': -120, 'elapsed': 5147, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}, colab={'base_uri': 'https://localhost:8080/', 'height': 139}}
+# #!pip install camb
+# #!pip install healpy
+# !git clone https://github.com/gonzalezm/NNhealpix.git
+```
+
+```{python id=ww6ZiT_rQ9-i, colab_type=code, colab={'base_uri': 'https://localhost:8080/', 'height': 156}, outputId=e2cfdb13-dc40-49b5-8c44-d87713f9f484, executionInfo={'status': 'ok', 'timestamp': 1562852508182, 'user_tz': -120, 'elapsed': 2607, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}}
+ !python NNhealpix/setup.py develop --user
+```
+
+```{python id=4emXZv4rNHxR, colab_type=code, colab={}}
+# !rm -r nnhealpix.egg-info
+```
+
+```{python id=Yw0Ib7KOPxro, colab_type=code, colab={}}
+# !cd NNhealpix/
+```
+
+```{python id=2GQLR6AvOMm_, colab_type=code, colab={'base_uri': 'https://localhost:8080/', 'height': 34}, outputId=b0035dc9-4bed-4855-b288-011a98bbce71, executionInfo={'status': 'ok', 'timestamp': 1562852634203, 'user_tz': -120, 'elapsed': 2160, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}}
+# !ls -a
+```
+
+```{python id=YNvBh4RQNMCy, colab_type=code, colab={'base_uri': 'https://localhost:8080/', 'height': 305}, outputId=eed897fe-904d-4f4c-e17b-76f4688168f3, executionInfo={'status': 'error', 'timestamp': 1562852738602, 'user_tz': -120, 'elapsed': 404, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}}
+import NNhealpix
+```
+
+```{python id=IoFancfhh9HJ, colab_type=code, outputId=c2705bc9-486c-44e4-c821-eea435ea5c1c, executionInfo={'status': 'ok', 'timestamp': 1562850594207, 'user_tz': -120, 'elapsed': 18314, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}, colab={'base_uri': 'https://localhost:8080/', 'height': 139}}
+import camb
+from camb import model, initialpower
+import healpy as hp 
+import numpy as np
+from pylab import *
+rcParams['image.cmap'] = 'jet'
+
+#Set up a new set of parameters for CAMB
+pars = camb.CAMBparams()
+#This function sets up CosmoMC-like settings, with one massive neutrino and helium set using BBN consistency
+pars.set_cosmology(H0=67.5, ombh2=0.022, omch2=0.122, mnu=0.06, omk=0, tau=0.06)
+pars.InitPower.set_params(ns=0.965, r=0)
+pars.set_for_lmax(2500, lens_potential_accuracy=0);
+#calculate results for these parameters
+results = camb.get_results(pars)
+#get dictionary of CAMB power spectra
+powers =results.get_cmb_power_spectra(pars, CMB_unit='muK')
+for name in powers: print(name)
+
+
+#plot the total lensed CMB power spectra versus unlensed, and fractional difference
+totCL=powers['total']
+unlensedCL=powers['unlensed_scalar']
+print(totCL.shape)
+
+# ls = np.arange(totCL.shape[0])
+```
+
+```{python id=7TvrWXl6h_ZB, colab_type=code, outputId=d2ff87a2-1933-4c72-a29f-c3c54c491ebd, executionInfo={'status': 'ok', 'timestamp': 1562850594230, 'user_tz': -120, 'elapsed': 18270, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}, colab={'base_uri': 'https://localhost:8080/', 'height': 69}}
+print(ls[0])
+CL = totCL[:,0]/ls/(ls+1)
+CL[0]=0
+
+ns = 16
+lmax = 2*ns-1
+nl = 2*ns
+nalm = (nl)*(nl+1)/2
+```
+
+```{python id=LqYJB5whiEZ4, colab_type=code, colab={}}
+### Target power spectra
+
+nbmodels = 110000
+nnn = int(nbmodels/30)
+npixok = 12*ns**2
+limit_shape = 3*ns
+okpix = np.arange(npixok)
+mymaps = np.zeros((nbmodels, npixok))
+myalms = np.zeros((nbmodels, nalm), dtype=complex128)
+expcls = np.zeros((nbmodels, nl))
+mycls = np.zeros((nbmodels, nl))
+allshapes = np.zeros((nbmodels, len(ls)))
+for i in range(nbmodels):
+  ylo = np.random.rand()*2
+  yhi = np.random.rand()*2
+  theshape = ylo+(yhi-ylo)/(limit_shape)*ls
+  theshape[theshape < 0] = 0
+  theshape[limit_shape:] = 0
+  allshapes[i,:] = theshape
+  theCL = CL*theshape
+  themap = hp.synfast(theCL, ns, pixwin=False, verbose=False)
+  mymaps[i,:] = themap[okpix]
+  expcls[i,:], myalms[i,:] = hp.anafast(themap, lmax=lmax, alm=True)
+  mycls[i,:] = theCL[0:nl]
+
+```
+
+```{python id=crgTOGoeiO3n, colab_type=code, outputId=85009fe3-9979-49b5-f3be-6ec8e8f6ddf8, executionInfo={'status': 'error', 'timestamp': 1562851326446, 'user_tz': -120, 'elapsed': 473, 'user': {'displayName': 'X.D.topher sama', 'photoUrl': 'https://lh5.googleusercontent.com/-bezrQ2Sgsnc/AAAAAAAAAAI/AAAAAAAACa4/mLbI1TQOnSM/s64/photo.jpg', 'userId': '09059908567566041974'}}, colab={'base_uri': 'https://localhost:8080/', 'height': 375}}
+num_out = mycls.shape[1]
+shape=(len(mymaps[0,:]),1)
+
+### Deep learning on CNN architecture
+import keras as kr
+import nnhealpix
+
+#NBB layers
+inputs=kr.layers.Input(shape)
+x=inputs
+for i in range (int(math.log(ns,2))):
+#Recog of the neighbours & Convolution
+    print(int(ns/(2**(i))), int(ns/(2**(i+1))))
+    x = nnhealpix.layers.ConvNeighbours(int(ns/(2**(i))), filters=32, kernel_size=9)(x)
+    x = kr.layers.Activation('relu')(x)
+#Degrade
+    x = nnhealpix.layers.MaxPooling(int(ns/(2**(i))), int(ns/(2**(i+1))))(x)
+#End of the NBBs
+x = kr.layers.Dropout(0.2)(x)
+x = kr.layers.Flatten()(x)
+x = kr.layers.Dense(48)(x)
+x = kr.layers.Activation('relu')(x)
+x = kr.layers.Dense(num_out)(x)
+
+out=kr.layers.Activation('relu')(x)
+
+
+
+# Training
+nbtest = 1000
+
+mx = np.max(np.abs(mymaps))
+my = np.max(mycls)
+
+mymaps = mymaps.reshape(mymaps.shape[0], len(mymaps[0]), 1)
+
+class PrintNum(keras.callbacks.Callback):
+  def on_epoch_end(self,epoch,logs):
+    if (epoch) % 10 == 0: 
+      print(epoch)
+    sys.stdout.write('.')
+    sys.stdout.flush()
+
+stop = kr.callbacks.EarlyStopping(monitor='val_loss',
+                                  verbose = 0,
+                                  restore_best_weights=True,
+                                  patience=20)
+
+callbacks = [PrintNum(), stop]
+
+
+# Creation of the model
+mymodel = kr.models.Model(inputs=inputs, outputs=out)
+mymodel.compile(loss=kr.losses.mse, optimizer='adam', metrics=[kr.metrics.mean_absolute_percentage_error])
+mymodel.summary()
+
+# Training
+history = model.fit(mymaps[:(nbmodels-nbtest),:,:], mycls[:(nbmodels-nbtest),:], epochs=100, batch_size=32, validation_split = 0.1, verbose = 1, callbacks=callbacks, shuffle = True)
+```
+
+```{python id=mY_SROHhnquB, colab_type=code, colab={}}
+# summarize history for loss
+plot(history.history['loss'])
+plot(history.history['val_loss'])
+title('model loss')
+ylabel('loss')
+xlabel('epoch')
+legend(['train', 'test'], loc='upper left')
+yscale('log')
+show()
+print(min(history.history['loss']), min(history.history['val_loss']), len(history.history['val_loss']))
+```
+
+```{python id=iDECsUpViXJ8, colab_type=code, colab={}}
+mymaps_test = mymaps[(nbmodels-nbtest):,:]
+mycls_test = mycls[(nbmodels-nbtest):,:]
+expcls_test = expcls[(nbmodels-nbtest):,:]
+
+result = my * model.predict(mymaps_test / mx, batch_size=128)
+```
+
+```{python id=Klsgle0HFeHc, colab_type=code, colab={}}
+mean_err = np.mean(abs((result[:,2:]-mycls_test[:,2:])/mycls_test[:,2:]*100))
+mean_err_ana = np.mean(abs((expcls_test[:,2:]-mycls_test[:,2:])/mycls_test[:,2:]*100))
+print(mean_err)
+print(mean_err_ana)
+```
+
+```{python id=z3uvqa_nBiXU, colab_type=code, colab={}}
+import numpy as np
+lt=np.arange(nl)
+num=np.random.randint(result.shape[0])
+plot(lt, lt*(lt+1)*mycls_test[num,:],label ='Input spectra')
+plot(lt, lt*(lt+1)*expcls_test[num,:],label ='Anafast')
+plot(lt, lt*(lt+1)*result[num,:],label ='ML')
+title(num)
+legend()
+```
+
+```{python id=q-WS5WPEOZ9b, colab_type=code, colab={}}
+figure()
+a=hist(np.ravel(expcls_test[:,2:]-mycls_test[:,2:]), bins=100, alpha=0.5, label='Anafast')
+a=hist(np.ravel(result[:,2:]-mycls_test[:,2:]), bins=100, alpha=0.5, label = 'ML')
+yscale('log')
+legend()
+
+ch2anafast = np.sum((expcls_test[:,2:]-mycls_test[:,2:])**2, axis=1)
+ch2ML = np.sum((result[:,2:]-mycls_test[:,2:])**2, axis=1)
+
+figure()
+a=hist(ch2anafast, bins=100, alpha=0.5, label='Anafast')
+a=hist(ch2ML, bins=100, alpha=0.5, label = 'ML')
+yscale('log')
+legend()
+```
+
+```{python id=BNl3317hRi4f, colab_type=code, colab={}}
+from joblib import dump
+import keras as kr
+import datetime
+from google.colab import drive
+drive.mount('/content/gdrive')
+
+today = datetime.datetime.now().strftime('%Y%m%d_%H_%M_%S')
+out_dir="/content/gdrive/My Drive/Colab Notebooks/"
+
+kr.models.save_model(model, out_dir +  today + "_mymodel_CNN.h5py.File")
+```
+
+```{python id=zthM1tP6VMwe, colab_type=code, colab={}}
+#np.save(out_dir + today + "_loss-alm", history.history['loss'])
+#np.save(out_dir + today + "_val_loss-alm", history.history['val_loss'])
+```
+
+```{python id=hl1_uBtCXSWy, colab_type=code, colab={}}
+#np.save(out_dir + today + "_mymaps", mymaps)
+
+```
+
+```{python id=D1nca46YYhGI, colab_type=code, colab={}}
+
+```
+
+<!-- #region {"id": "nUMjgmETG9Lv", "colab_type": "text"} -->
+# Tests sur réseaux denses avec mymaps en input
+
+``` python
+model = Sequential()
+
+from keras.layers import Dense
+model.add(Dense(units=nalm*6,activation='relu',input_dim=npixok,kernel_initializer='uniform'))
+model.add(Dense(units=nalm*3, activation='relu'))
+model.add(Dense(units=nl, activation='linear'))
+model.compile(optimizer='adam',
+              loss='mse',
+              metrics=['accuracy'])
+```
+
+# Test 1:
+Deux couches dense de nalm*6 et nl neurones avec nl = 2*ns et nalm=(nl)*(nl+1)/2.
+Entrainement avec 80% des données soit 80 000 cartes et un spli de 0,1.
+100 epoch d'entrainement.
+
+## Resultats1: 
+Erreur absolue moyenne relative de :
+### 20,53%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22,30%
+
+# Test 2:
+Deux couches dense de nalm10 et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats2:
+Erreur absolue moyenne relative de :
+### 45,77%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22,30%
+
+# Test3:
+Deux couches dense de nalm3 et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats3:
+Erreur absolue moyenne relative de :
+### 61,00%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22,32%
+
+En changeant le nombre de neurones de la première couche on a une modification de la performance mais pas de différence notable sur le chi2 ou l'histogramme de l'erreur si ce n'est des valeur légèrement différente (en accord ave la nouvelle erreur). Il semble que 6*nalme soit la meilleur quantité de neurones.
+
+
+
+# Test4:
+Trois couches dense de nalm*6, nalm*6 (act = linear) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats4:
+Erreur absolue moyenne relative de :
+### 97.36667359705528%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22.323505638289156%
+
+# Test5:
+Trois couches dense de nalm*6, nalm*8 (act = linear) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats5:
+Erreur absolue moyenne relative de :
+### 70.17615607561682%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22.323505638289156%
+
+# Test6:
+Trois couches dense de nalm*6, nalm*12 (act = linear) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats6:
+Erreur absolue moyenne relative de :
+### 69.0112935047282%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22.337909475916774%
+
+On a ajouté une couche de neurone dense. En faisant varier la quantié de neurones on observe
+
+# Test7:
+Trois couches dense de nalm*6, nalm*6 (act = relu) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats7:
+Erreur absolue moyenne relative de :
+### 14.372369414690606%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22.321932372640372%
+
+# Test8:
+Trois couches dense de nalm*6, nalm*8 (act = relu) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats8:
+Erreur absolue moyenne relative de :
+### 15.105077069416465%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22.276099533297497%
+
+# Test9:
+Trois couches dense de nalm*6, nalm*4 (act = relu) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats9:
+Erreur absolue moyenne relative de :
+### 13.116186779395962%. 
+Erreur absolue moyenne relative sur anafast de :
+### 22.294983163667492%
+
+# Test10:
+Trois couches dense de nalm*6, nalm*2 (act = relu) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats10:
+Erreur absolue moyenne relative de :
+### 18.824813082983688%. 
+Erreur absolue moyenne relative sur anafast de :
+### ~22.294983163667492%
+
+# Test11:
+Trois couches dense de nalm*6, nalm*3 (act = relu) et nl neurones
+Entrainement avec 80% des données soit 80 000 cartes et un split de 0,1.
+100 epoch d'entrainement.
+
+## Resultats11:
+Erreur absolue moyenne relative de :
+### 13.89%. 
+Erreur absolue moyenne relative sur anafast de :
+### ~22.294983163667492%
+
+<!-- #endregion -->
+
+<!-- #region {"id": "OqPKY6VRBJHS", "colab_type": "text"} -->
+# Conclusion
+Au vu des tests réalisés, on observe qu'en conservant le nombre de neurones originaux pour la premiere couche, le programme est le plus performant (pour cette configuration). On remarque également qu'en ajoutant une couche dense de 4nalm neurones avec une fonction d'activation 'relu', les performance s'acroissent fortement (7% de gain). On pourrait ajouter de nouvelles couches denses 'relu' et faire varier leurs nombres de neurones pour améliorer les performances et diminuer l'erreur, cependant le temps necessaire pour réaliser les opération de la part de GGL Colab étant déjà long pour une couche supplémentaire on peut se douter qu'icelui augmentera encore. Au final si nous mettons plus de couches nous pourrions avoir un résultat plus smooth comme obtenu avec le CNN mais pour un temps beacoup plus long.
+
+Les différences notables entre les résultats de cette architecture et celle des réseau convolutionels se trouve sur le fit des Cl (normal). Avec le réseau dense on retrouve grossièrement le spectre recherché mais avec de légères oscillations semblable à du bruit. Avec le CNN on retrouve le spectre attendu mais avec des pics spontanés à certains points du spectre. Le manque de test sur le CNN pour ce problème ne me permet pas de le comparer efficacement avec le réseau dense, mais offre une idée des différences potentielle.
+
+<!-- #endregion -->
+
+<!-- #region {"id": "WfoyXYywBM0c", "colab_type": "text"} -->
+# Tests avec réseau CNN NNhealpix, my maps en inputs
+
+# Test12:
+Test sur le réseau identique à celui de l'article avec 100k data. Degrade jusqu'à 1.
+
+
+
+## Résultats12:
+
+<!-- #endregion -->
