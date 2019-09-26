@@ -9,6 +9,12 @@ import json
 from keras.models import model_from_json
 
 
+def make_random_dipole_maps(nmodel,nside):
+    cls = np.random.rand(nmodel, 2)
+    cls[:,0]=0
+    random_dipole_maps = [hp.synfast(cls[i],16,verbose=0) for i in range(nmodel)]
+    return cls, random_dipole_maps
+
 def make_maps_with_random_spectra(nmodel, lmax, nside):
     cls = np.random.rand(nmodel, lmax)
     random_maps = [hp.synfast(cls[i],16,verbose=0) for i in range(nmodel)]
@@ -326,12 +332,13 @@ def make_training(model, x_train, y_train, validation_split, epochs, batch_size,
         period=2)
 
     # Stop the training if doesn't improve
-    stop = kr.callbacks.EarlyStopping(monitor='val_loss',
-                                      verbose=0,
-                                      restore_best_weights=True,
-                                      patience=patience)
-
-    callbacks = [checkpointer_mse, stop]
+#    stop = kr.callbacks.EarlyStopping(monitor='val_loss',
+#                                      verbose=0,
+#                                      restore_best_weights=True,
+#                                      patience=patience)
+#
+#    callbacks = [checkpointer_mse, stop]
+    callbacks = [checkpointer_mse]
 
     # Train the model
     hist = model.fit(x_train, y_train,

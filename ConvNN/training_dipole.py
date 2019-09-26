@@ -30,7 +30,11 @@ cl = np.load(in_dir + '/cl_train.npy')
 maps = np.load(in_dir + '/maps_train.npy')
 print('maps shape :', maps.shape)
 
+#Get only the cl corresponding to l=1
+c1 = cl[:,1] 
+
 # Get Nside
+
 nside = hp.npix2nside(maps.shape[1])
 print('nside : ', nside)
 
@@ -45,7 +49,7 @@ maps = cnn.NormalizeMaps(maps)
 # model = cnn.load_model(premodel, weights=None)
 
 # Make a model
-model = cnn.make_model(nside, cl[0].size, out_dir)
+model = cnn.make_model(nside, c1[0].size, out_dir)
 
 # Train the model
-model, hist = cnn.make_training(model, maps, cl, 0.1, 40, 20, out_dir)
+model, hist = cnn.make_training(model, maps, c1, 0.1, 40, 20, out_dir)
