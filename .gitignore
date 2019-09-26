@@ -1,2 +1,8 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
 # Notebooks
 .ipynb
+.ipynb_checkpoints
+
