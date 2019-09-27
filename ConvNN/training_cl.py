@@ -7,7 +7,7 @@ import datetime
 import ConvNNTempLib as cnn
 
 """
-Test script to find the maximum of a gaussian power spectrum
+Test script to find a power spectrum
 parameters: name, input directory, output directory
 """
 name = sys.argv[1]
