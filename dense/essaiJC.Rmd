@@ -1,0 +1,257 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.1
+  kernelspec:
+    display_name: Python 2
+    language: python
+    name: python2
+---
+
+```{python id=BytDU4igu5eK, colab_type=code, outputId=e919ad91-b4d5-435a-92a1-27f03baff5eb, colab={'base_uri': 'https://localhost:8080/', 'height': 870}}
+# !pip install camb
+# !pip install healpy
+import camb
+from camb import model, initialpower
+import healpy as hp 
+import numpy as np
+from pylab import *
+rcParams['image.cmap'] = 'jet'
+```
+
+```{python id=hTbX9yDYwRAH, colab_type=code, outputId=d4e3975b-5310-4a34-ab11-d995493cc60c, colab={'base_uri': 'https://localhost:8080/', 'height': 483}}
+#Set up a new set of parameters for CAMB
+pars = camb.CAMBparams()
+#This function sets up CosmoMC-like settings, with one massive neutrino and helium set using BBN consistency
+pars.set_cosmology(H0=67.5, ombh2=0.022, omch2=0.122, mnu=0.06, omk=0, tau=0.06)
+pars.InitPower.set_params(ns=0.965, r=0)
+pars.set_for_lmax(2500, lens_potential_accuracy=0);
+#calculate results for these parameters
+results = camb.get_results(pars)
+#get dictionary of CAMB power spectra
+powers =results.get_cmb_power_spectra(pars, CMB_unit='muK')
+for name in powers: print(name)
+
+
+#plot the total lensed CMB power spectra versus unlensed, and fractional difference
+totCL=powers['total']
+unlensedCL=powers['unlensed_scalar']
+print(totCL.shape)
+
+# ls = np.arange(totCL.shape[0])
+clf()
+plot(ls,totCL[:,0], color='k')
+
+```
+
+```{python id=xFML8D1svBH9, colab_type=code, outputId=ebf2bf5f-5f54-43c4-a3c4-168709a83d21, colab={'base_uri': 'https://localhost:8080/', 'height': 543}}
+CL = totCL[:,0]/ls/(ls+1)
+CL[0]=0
+
+ns = 64
+map =hp.synfast(CL, ns, pixwin=False)
+hp.mollview(map)
+```
+
+```{python id=iPUtsVq_vR7i, colab_type=code, outputId=6699d46a-f722-48df-cec9-cf265f7a0607, colab={'base_uri': 'https://localhost:8080/', 'height': 364}}
+outcl = hp.anafast(map)
+ll = np.arange(outcl.shape[0])
+
+clf()
+plot(ll,ll*(ll+1)*outcl)
+plot(ls, ls*(ls+1)*CL, 'r')
+xlim(0,max(ll))
+```
+
+```{python id=nkrECwgkvwAv, colab_type=code, outputId=e45775f6-e6ee-423a-e4ee-c7d1769d0dea, colab={'base_uri': 'https://localhost:8080/', 'height': 387}}
+### Define a mask
+center_gal = np.array([316.45, -58.76])
+pixcenter = hp.ang2pix(ns, np.radians(90-center_gal[1]), np.radians(center_gal[0]))
+veccenter = hp.pix2vec(ns, pixcenter)
+vecall = hp.pix2vec(ns, arange(12*ns**2))
+ang = np.arccos(np.dot(veccenter, vecall))
+okpix = np.degrees(ang) < 20.
+npixok = okpix.sum()
+
+mask = np.zeros(12*ns**2)
+mask[okpix] = 1
+hp.mollview(mask)
+```
+
+```{python id=x2V_jimb9Oxl, colab_type=code, outputId=1a670ffb-122a-4b96-e2fe-450d8443cdfc, colab={'base_uri': 'https://localhost:8080/', 'height': 387}}
+mappatch = map * mask
+clpatch = hp.anafast(mappatch)
+hp.mollview(mappatch)
+
+```
+
+```{python id=rp3csmGh_buN, colab_type=code, outputId=1e90f02e-d072-4b9f-e576-b35bbac042cd, colab={'base_uri': 'https://localhost:8080/', 'height': 364}}
+plot(ll,ll*(ll+1)*clpatch/np.sum(mask)*len(mask))
+plot(ls, ls*(ls+1)*CL, 'r')
+xlim(0,max(ll))
+print(np.sum(mask),len(mask))
+```
+
+```{python id=qJyeK56zvWQ3, colab_type=code, outputId=06a94aa3-c871-40ae-ab53-35541faeecca, colab={'base_uri': 'https://localhost:8080/', 'height': 708}}
+### Target power spectra
+clt = CL[0:2*ns]
+lt = ll[0:2*ns]
+
+nbmodels = 2048
+mymaps = np.zeros((nbmodels, npixok))
+mycls = np.zeros((nbmodels, 2*ns))
+for i in xrange(nbmodels):
+  if (i/100)*100 == i: 
+    print(i)
+  ylo = np.random.rand()
+  yhi = np.random.rand()
+  theshape = ylo+(yhi-ylo)/(np.max(ls)-np.min(ls))*ls
+  theCL = CL*theshape
+  mycls[i,:] = theCL[0:2*ns]
+  themap = hp.synfast(theCL, ns, pixwin=False, verbose=False) * mask
+  mymaps[i,:] = themap[okpix]
+
+
+for i in xrange(nbmodels):
+  plot(lt, lt*(lt+1)*mycls[i,:])
+
+```
+
+```{python id=_vWc5QFZ-kre, colab_type=code, colab={}}
+from keras.models import Sequential
+
+model = Sequential()
+```
+
+```{python id=O37d-mEW-k3H, colab_type=code, colab={}}
+from keras.layers import Dense
+model.add(Dense(units=npixok*2, activation='relu', input_dim=npixok))
+model.add(Dense(units=2*ns, activation='softmax'))
+
+```
+
+```{python id=OjXCsUWR-k_a, colab_type=code, colab={}}
+model.compile(loss='categorical_crossentropy',
+              optimizer='sgd',
+              metrics=['accuracy'])
+```
+
+```{python id=3S4RmovE-lDH, colab_type=code, colab={}}
+import keras
+model.compile(loss=keras.losses.categorical_crossentropy,
+              optimizer=keras.optimizers.SGD(lr=0.01, momentum=0.9, nesterov=True))
+```
+
+```{python id=Y8ZfoBTy-lGF, colab_type=code, outputId=e3b19f51-5645-4ca7-80f9-58205d8615e8, colab={'base_uri': 'https://localhost:8080/', 'height': 1754}}
+# x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
+
+#model.fit(x_train, y_train, epochs=5, batch_size=32)
+model.fit(mymaps, mycls, epochs=50, batch_size=32)
+```
+
+```{python id=3R9nIsnHvk4R, colab_type=code, outputId=cdf0a0af-d03b-482a-f63d-ad93634de447, colab={'base_uri': 'https://localhost:8080/', 'height': 119}}
+nbmodels = 512
+mymaps_test = np.zeros((nbmodels, npixok))
+mycls_test = np.zeros((nbmodels, 2*ns))
+for i in xrange(nbmodels):
+  if (i/100)*100 == i: 
+    print(i)
+  ylo = np.random.rand()
+  yhi = np.random.rand()
+  theshape = ylo+(yhi-ylo)/(np.max(ls)-np.min(ls))*ls
+  theCL = CL*theshape
+  mycls_test[i,:] = theCL[0:2*ns]
+  themap = hp.synfast(theCL, ns, pixwin=False, verbose=False) * mask
+  mymaps_test[i,:] = themap[okpix]
+
+
+
+```
+
+```{python id=v_MLHahI-lI_, colab_type=code, outputId=c721a3df-b194-42f1-d681-440b37661adb, colab={'base_uri': 'https://localhost:8080/', 'height': 34}}
+loss_and_metrics = model.evaluate(mymaps_test, mycls_test, batch_size=128)
+```
+
+```{python id=DuJDm1Fs-lLq, colab_type=code, colab={}}
+#CLtest = CL[0:2*ns]
+#maptest = (hp.synfast(CLtest, ns, pixwin=False, verbose=False) * mask)[okpix]
+#loss_and_metrics = model.evaluate(x_test, y_test, batch_size=128)
+classes = model.predict(mymaps_test, batch_size=128)
+
+```
+
+```{python id=2dfW4Ad2-lOm, colab_type=code, outputId=9805262e-d989-4c2b-8d47-f6964ed0573d, colab={'base_uri': 'https://localhost:8080/', 'height': 364}}
+plot(classes[0,:])
+```
+
+```{python id=sptlQYV9wyUE, colab_type=code, colab={}}
+#### TensorFlow
+import tensorflow as tf
+
+model = tf.keras.Sequential([
+  tf.keras.layers.Dense(3*12*ns**2, activation="relu", input_shape=(12*ns**2,)),  # input shape required
+  tf.keras.layers.Dense(3*12*ns**2, activation="relu"),
+  tf.keras.layers.Dense(2*ns)
+])
+
+
+```
+
+```{python id=536qu0qhx54B, colab_type=code, colab={}}
+def loss(model, x, y):
+  y_ = model(x)
+  return tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_)
+
+
+def grad(model, inputs, targets):
+  with tf.GradientTape() as tape:
+    loss_value = loss(model, inputs, targets)
+  return tape.gradient(loss_value, model.variables)
+```
+
+```{python id=4f-FoCmtyXlJ, colab_type=code, colab={}}
+optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+```
+
+```{python id=9HdScqdXb8ga, colab_type=code, colab={}}
+#### Create the Training DataSet
+```
+
+```{python id=gNMpTFcXa--o, colab_type=code, colab={}}
+## Note: Rerunning this cell uses the same model variables
+
+# keep results for plotting
+train_loss_results = []
+train_accuracy_results = []
+
+num_epochs = 201
+
+for epoch in range(num_epochs):
+  epoch_loss_avg = tfe.metrics.Mean()
+  epoch_accuracy = tfe.metrics.Accuracy()
+
+  # Training loop - using batches of 32
+  for x, y in train_dataset:
+    # Optimize the model
+    grads = grad(model, x, y)
+    optimizer.apply_gradients(zip(grads, model.variables),
+                              global_step=tf.train.get_or_create_global_step())
+
+    # Track progress
+    epoch_loss_avg(loss(model, x, y))  # add current batch loss
+    # compare predicted label to actual label
+    epoch_accuracy(tf.argmax(model(x), axis=1, output_type=tf.int32), y)
+
+  # end epoch
+  train_loss_results.append(epoch_loss_avg.result())
+  train_accuracy_results.append(epoch_accuracy.result())
+  
+  if epoch % 50 == 0:
+    print("Epoch {:03d}: Loss: {:.3f}, Accuracy: {:.3%}".format(epoch,
+                                                                epoch_loss_avg.result(),
+                                                                epoch_accuracy.result()))
+```
