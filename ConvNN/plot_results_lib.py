@@ -38,10 +38,14 @@ def plot_error(pred, y_test):
      ================= Parameters ==================
     pred: array
         Prediction given by model.predict
-    y_test: An array with the expected data
+    y_test: array
+        Expected values.
     """
+    # Make 1D arrays
+    y_test = np.ravel(y_test)
     pred = np.ravel(pred)
-    err = (pred- y_test) / y_test * 100
+
+    err = (pred - y_test) / y_test * 100
     mean_err = np.mean(np.abs(err))
     std_err = np.std(err)
     print('Mean error: ', mean_err)
@@ -63,12 +67,10 @@ def plot_chi2(pred, y_test):
     ================= Parameters ==================
     pred: array
         Prediction given by model.predict
-    y_test: An array with the expected data
+    y_test: array
+        Expected values.
     """
-    # Make a 1D array
-    pred = np.ravel(pred)
-
-    chi2 = np.sum((pred - y_test) ** 2)
+    chi2 = np.sum((pred - y_test) ** 2, axis=1)
 
     plt.figure(1, figsize=(10, 10))
     plt.hist(chi2, color='b', bins=100, alpha=0.5)
@@ -82,10 +84,12 @@ def plot_in2out(pred, y_test):
     Show the plot of the prediction as a function of the test data
     ================= Parameters ==================
     pred: array
-     Prediction given by model.predict
-    y_test: A 1D array or a list with the expected data
+        Prediction given by model.predict
+    y_test: array
+        Expected values.
     """
-    # Make a 1D array
+    # Make 1D arrays
+    y_test = np.ravel(y_test)
     pred = np.ravel(pred)
 
     # To plot y = x as a reference
