@@ -161,32 +161,34 @@ num = np.random.randint(result.shape[0])
 
 for i in range(15):
     plt.figure()
-    plt.plot(ll, ll*(ll+1) * all_cl_theo_test[i, :], label='Input spectra')
-    plt.plot(ll, ll*(ll+1) * all_cl_ana_test[i, :], label='Anafast')
-    plt.plot(ll, ll*(ll+1) * result[i,:],label ='ML')
+    plt.plot(ll, ll * (ll + 1) * all_cl_theo_test[i, :], label='Input spectra')
+    plt.plot(ll, ll * (ll + 1) * all_cl_ana_test[i, :], label='Anafast')
+    plt.plot(ll, ll * (ll + 1) * result[i, :], label='ML')
     plt.title(num)
     plt.legend()
 
+
 # Histogram
 def statstr(x):
-  return '{0:8.3f} +/- {1:8.3f}'.format(np.mean(x), np.std(x))
+    return '{0:8.3f} +/- {1:8.3f}'.format(np.mean(x), np.std(x))
+
 
 diff_ana = np.ravel(all_cl_ana_test[:, 2:] - all_cl_theo_test[:, 2:])
 diff_ml = np.ravel(result[:, 2:] - all_cl_theo_test[:, 2:])
 
 plt.figure()
-plt.hist(diff_ana, bins=100, range=[-5,5], alpha=0.5,
-           label='Anafast: '+statstr(diff_ana))
-plt.hist(diff_ml, bins=100, range=[-5,5], alpha=0.5,
-           label = 'ML: '+statstr(diff_ml))
+plt.hist(diff_ana, bins=100, range=[-5, 5], alpha=0.5,
+         label='Anafast: ' + statstr(diff_ana))
+plt.hist(diff_ml, bins=100, range=[-5, 5], alpha=0.5,
+         label='ML: ' + statstr(diff_ml))
 plt.yscale('log')
 plt.legend(loc='lower right')
 
-ch2anafast = np.sum((all_cl_ana_test[:, 2:] - all_cl_theo_test[:, 2:])**2, axis=1)
-ch2ML = np.sum((result[:, 2:] - all_cl_theo_test[:, 2:])**2, axis=1)
+ch2anafast = np.sum((all_cl_ana_test[:, 2:] - all_cl_theo_test[:, 2:]) ** 2, axis=1)
+ch2ML = np.sum((result[:, 2:] - all_cl_theo_test[:, 2:]) ** 2, axis=1)
 
 plt.figure()
-plt.hist(ch2anafast, bins=100, range=[0,10000], alpha=0.5, label='Anafast')
-plt.hist(ch2ML, bins=100, range=[0,10000], alpha=0.5, label = 'ML')
+plt.hist(ch2anafast, bins=100, range=[0, 10000], alpha=0.5, label='Anafast')
+plt.hist(ch2ML, bins=100, range=[0, 10000], alpha=0.5, label='ML')
 plt.yscale('log')
 plt.legend()
