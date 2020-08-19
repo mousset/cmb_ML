@@ -342,7 +342,7 @@ def get_binned_spectra(nside, lmin, lmax, delta_ell, input_spectra):
     mask[np.arange(10)] = 1
     Namaster = nam.Namaster(mask, lmin=lmin, lmax=lmax, delta_ell=delta_ell)
     ell_binned, b = Namaster.get_binning(nside)
-    print(input_spectra.shape)
+    #print(input_spectra.shape)
     binned_spectra = Namaster.bin_spectra(input_spectra, nside)#Namaster.bin_spectra(input_Dl[0, :], nside)
     return binned_spectra
         
